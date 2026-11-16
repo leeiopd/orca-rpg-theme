@@ -16,7 +16,7 @@ import {
 } from './game'
 import { drawFrame, FRAMES, GRID, type ClassId, type Motion } from './sprites'
 
-const SCALE = 3
+const SCALE = 2
 const FRAME_MS = 220
 const ACTION_MS = 4_000
 

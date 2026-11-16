@@ -1,13 +1,14 @@
 // Writes every class x motion x frame to one PNG sheet so the sprites can be checked without Orca.
-// usage: node tools/preview-sprites.ts [out.png] [scale]   (Node 23.6+ runs .ts directly)
+// usage: node tools/preview-sprites.ts [out.png] [scale] [motion,motion...]   (Node 23.6+ runs .ts directly)
 import { writeFileSync } from 'node:fs'
 import { deflateSync, crc32 } from 'node:zlib'
-import { drawFrame, FRAMES, GRID, MOTIONS, type ClassId } from '../src/sprites.ts'
+import { drawFrame, FRAMES, GRID, MOTIONS as ALL_MOTIONS, type ClassId, type Motion } from '../src/sprites.ts'
 
 const out = process.argv[2] ?? 'sprites-preview.png'
 const scale = Number(process.argv[3] ?? 4)
+const MOTIONS = process.argv[4] ? (process.argv[4].split(',') as Motion[]) : ALL_MOTIONS
 const classes: ClassId[] = ['mage', 'warrior', 'ranger', 'cleric', 'rogue']
-const maxFrames = Math.max(...Object.values(FRAMES))
+const maxFrames = Math.max(...MOTIONS.map((m) => FRAMES[m]))
 const cell = GRID + 4
 const cols = maxFrames * classes.length
 const W = cols * cell * scale

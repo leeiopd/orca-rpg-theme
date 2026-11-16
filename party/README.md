@@ -36,9 +36,9 @@ Orca 오른쪽 사이드바에 Party 패널을 추가합니다. 현재 워크스
 orca plugin test .                 # 규칙·워커 테스트
 npx -p typescript tsc -p .         # 타입 검사
 orca plugin dev load .             # Orca에 불러오기 (승인 필요)
-node tools/preview-sprites.ts out.png 3   # 스프라이트 시트 PNG
+node tools/preview-sprites.ts out.png 3 [idle,cast]   # 스프라이트 시트 PNG (모션 선택 가능)
 orca plugin dev request . party.demo --data '{"on":true}'    # 시연 파티 5명 표시 (스크린샷용)
 orca plugin dev request . party.demo --data '{"on":false}'   # 실제 에이전트 표시로 복귀
 ```
 
-그림은 `src/sprites.ts`가 32×32 격자에 코드로 그립니다. 외부 이미지는 쓰지 않습니다.
+그림은 `src/sprites.ts`가 48×48 격자에 코드로 그립니다(머리는 픽셀 맵, 몸은 3단 음영). 외부 이미지는 쓰지 않습니다.
