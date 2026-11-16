@@ -67,3 +67,13 @@ test('party.order answers terminal handles in tab order from the layouts', async
   main.deps.readLayouts = saved
   await again.deactivate()
 })
+
+test('party.demo stores the flag and tells open panels', async () => {
+  const host = mockHost()
+  const worker = await mountWorker(main, { host })
+  assert.deepEqual(await worker.request('party.demo', { on: true }), { on: true })
+  assert.deepEqual(host.data().storage, { demo: true })
+  assert.deepEqual(await worker.request('party.demo', { on: false }), { on: false })
+  assert.deepEqual(worker.posts.map((p) => p.payload), [{ on: true }, { on: false }])
+  await worker.deactivate()
+})

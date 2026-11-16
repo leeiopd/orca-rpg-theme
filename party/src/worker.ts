@@ -34,6 +34,7 @@ const readLayoutsFromCli: ReadLayouts = () =>
 export const deps: { readLayouts: ReadLayouts } = { readLayouts: readLayoutsFromCli }
 
 const XP_KEY = 'xp'
+const DEMO_KEY = 'demo'
 const MAX_ENTRIES = 200
 
 type XpTable = Record<string, number>
@@ -50,6 +51,13 @@ export default function activate(orca: OrcaWorkerApi): void {
   let chain: Promise<unknown> = Promise.resolve()
 
   orca.panels.handle('party.xp', async () => ({ xp: asTable(await orca.storage.get(XP_KEY)) }))
+
+  // Demo party for screenshots: `orca plugin dev request . party.demo --data '{"on":true}'`.
+  orca.panels.handle('party.demo', async ({ on }) => {
+    await orca.storage.set(DEMO_KEY, on === true)
+    orca.panels.post('party.demo', { on: on === true })
+    return { on: on === true }
+  })
 
   // One CLI run serves every panel request made within a second.
   let cached: { at: number; order: Promise<string[]> } | null = null

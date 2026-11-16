@@ -188,14 +188,44 @@ async function tabOrder(): Promise<string[]> {
 
 /** Tabs can be dragged without any event, so check the order now and then. */
 async function reorder(): Promise<void> {
-  if (members.length < 2) return
+  if (demo || members.length < 2) return
   const sorted = sortByOrder(members, (m) => m.terminalId, await tabOrder())
   if (sorted.every((m, i) => m === members[i])) return
   members = sorted
   list.replaceChildren(...members.map((m) => m.el.root))
 }
 
+/** Fixed sample members shown in demo mode (for screenshots); never mixed with real agents. */
+const DEMO: { title: string; agent: string; cls: ClassId; state: AgentState; motion: Motion; detail: string; xp: number }[] = [
+  { title: '결제 API 리팩터링', agent: 'claude', cls: 'mage', state: 'working', motion: 'cast', detail: 'npm test', xp: 64 },
+  { title: '주문 화면 버그 수정', agent: 'codex', cls: 'warrior', state: 'working', motion: 'rune', detail: 'order-list.tsx', xp: 132 },
+  { title: 'TODO 정리', agent: 'claude', cls: 'ranger', state: 'working', motion: 'read', detail: 'TODO', xp: 23 },
+  { title: '배포 승인 대기', agent: 'claude', cls: 'cleric', state: 'blocked', motion: 'help', detail: '', xp: 41 },
+  { title: '릴리스 노트 작성', agent: 'codex', cls: 'rogue', state: 'done', motion: 'victory', detail: '', xp: 198 }
+]
+let demo = false
+
+function showDemo(): void {
+  members = DEMO.map((d, i) =>
+    buildCard({
+      terminalId: `demo-${i}`,
+      title: d.title,
+      agent: d.agent,
+      cls: d.cls,
+      state: d.state,
+      since: Date.now(),
+      action: { motion: d.motion, until: Number.POSITIVE_INFINITY, line: '' },
+      log: battleLine(d.cls, d.motion, d.detail || undefined),
+      xp: d.xp
+    })
+  )
+  list.replaceChildren(...members.map((m) => m.el.root))
+  count.textContent = `${members.length} members · demo`
+  members.forEach(renderText)
+}
+
 async function refresh(): Promise<void> {
+  if (demo) return showDemo()
   let agents: AgentRow[] = []
   try {
     agents = ((await orca.host.call('agents.list')) as { agents: AgentRow[] }).agents
@@ -259,6 +289,7 @@ function tick(now: number): void {
 }
 
 orca.on('agent.status.changed', (p) => {
+  if (demo) return
   const m = members.find((x) => p.terminalId && x.terminalId === p.terminalId)
   if (!m) return void refresh()
   m.state = p.state
@@ -269,8 +300,15 @@ orca.on('agent.status.changed', (p) => {
 })
 orca.on('workspace.changed', () => void refresh())
 
+orca.plugin.on('party.demo', (p) => {
+  demo = p.on
+  members = []
+  void refresh()
+})
+
 orca.plugin.on('party.action', (p) => {
   if (p.terminalId) xpTable[p.terminalId] = p.xp
+  if (demo) return
   const m = members.find((x) => p.terminalId && x.terminalId === p.terminalId)
   if (!m) return
   const motion = motionForTool(p.tool)
@@ -295,6 +333,11 @@ async function start(): Promise<void> {
     }
   } catch {
     savedClasses = {}
+  }
+  try {
+    demo = (await orca.storage.get('demo')) === true
+  } catch {
+    demo = false
   }
   await refresh()
   setInterval(() => void reorder(), 5_000)
