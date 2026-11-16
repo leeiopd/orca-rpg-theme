@@ -1,0 +1,32 @@
+{
+  "manifestVersion": 2,
+  "id": "rpg-party",
+  "name": "RPG Party",
+  "version": "0.1.0",
+  "description": "Your agents as a pixel RPG party: each member acts out the agent's status and tool calls, and levels up with every tool call.",
+  "engines": {
+    "orca": ">=1.4.248"
+  },
+  "execution": "trusted-worker",
+  "pluginApi": 1,
+  "main": "src/worker.ts",
+  "contributes": {
+    "panels": [
+      {
+        "id": "party",
+        "title": "Party",
+        "icon": "agent",
+        "entry": "src/panel.ts",
+        "ui": "html"
+      }
+    ],
+    "hooks": [
+      { "event": "agent.tool.after" }
+    ]
+  },
+  "capabilities": [
+    { "kind": "storage:own" },
+    { "kind": "agent:read" },
+    { "kind": "workspace:read" }
+  ]
+}

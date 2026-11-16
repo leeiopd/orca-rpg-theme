@@ -1,0 +1,42 @@
+{
+  "manifestVersion": 2,
+  "id": "rpg-pixel",
+  "name": "RPG Pixel",
+  "version": "0.1.0",
+  "description": "A 16-bit RPG night theme: navy, cream and gold colors, a pixel-art starlit road behind the terminals, and the Galmuri pixel font.",
+  "engines": {
+    "orca": ">=1.4.253"
+  },
+  "execution": "data",
+  "contributes": {
+    "themes": [
+      {
+        "id": "starlit-road",
+        "title": "RPG Pixel: Starlit Road",
+        "path": "themes/starlit-road.json"
+      }
+    ],
+    "terminalThemes": [
+      {
+        "id": "starlit-road",
+        "title": "RPG Pixel: Starlit Road",
+        "path": "terminal/starlit-road.json"
+      }
+    ],
+    "fonts": [
+      {
+        "family": "Galmuri11",
+        "faces": [
+          { "path": "fonts/Galmuri11.woff2", "weight": "400" },
+          { "path": "fonts/Galmuri11-Bold.woff2", "weight": "700" }
+        ]
+      },
+      {
+        "family": "GalmuriMono11",
+        "faces": [
+          { "path": "fonts/GalmuriMono11.woff2", "weight": "400" }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,198 @@
+{
+  "schemaVersion": 1,
+  "base": "dark",
+  "tokens": {
+    "--background": "#070a20",
+    "--editor-surface": "#080b24",
+    "--foreground": "#f3eedd",
+    "--card": "#12184a",
+    "--card-foreground": "#f3eedd",
+    "--popover": "#151c55",
+    "--popover-foreground": "#f3eedd",
+    "--primary": "#ffcf66",
+    "--primary-foreground": "#10153c",
+    "--secondary": "#1c2360",
+    "--secondary-foreground": "#f3eedd",
+    "--muted": "#141a4c",
+    "--muted-foreground": "#b4b2d6",
+    "--accent": "#1f2766",
+    "--accent-foreground": "#fff6dc",
+    "--border": "#3a428a",
+    "--input": "#4a53a0",
+    "--ring": "#ffcf66",
+    "--chart-1": "#ffcf66",
+    "--chart-2": "#86b0ff",
+    "--chart-3": "#7fd8b8",
+    "--chart-4": "#ff8a7a",
+    "--chart-5": "#c49bff",
+    "--sidebar": "#0d1233",
+    "--sidebar-foreground": "#dfe4f5",
+    "--sidebar-primary": "#8fb8ff",
+    "--sidebar-primary-foreground": "#0a0e2a",
+    "--sidebar-accent": "#1c2462",
+    "--sidebar-accent-foreground": "#ffffff",
+    "--sidebar-border": "#2c336f",
+    "--sidebar-ring": "#8fb8ff",
+    "--worktree-sidebar": "#0b0f2e",
+    "--worktree-sidebar-foreground": "#e4dfcc",
+    "--worktree-sidebar-accent": "#1a2160",
+    "--worktree-sidebar-accent-foreground": "#fff6dc",
+    "--worktree-sidebar-border": "#2c336f",
+    "--worktree-sidebar-ring": "#ffcf66",
+    "--worktree-sidebar-active": "#ffcf6624",
+    "--worktree-sidebar-active-border": "#ffcf66",
+    "--host-badge": "#24306e",
+    "--host-badge-foreground": "#9fe0c8",
+    "--tab-bar": "#0a0e2a",
+    "--tab-active": "#1a2160",
+    "--tab-active-foreground": "#ffd98a",
+    "--tab-active-indicator": "#ffcf66",
+    "--tab-inactive": "#0a0e2a",
+    "--tab-inactive-foreground": "#a9aedc",
+    "--split-divider": "#2c336f",
+    "--split-divider-hover": "#ffcf66",
+    "--chat-user-message": "#ffcf661f",
+    "--chat-bold-foreground": "#ffd98a",
+    "--chat-muted-foreground": "#a9aed6",
+    "--chat-inline-code": "#7fe0c826",
+    "--chat-inline-code-foreground": "#9ff0d8",
+    "--chat-code-block": "#04061acc",
+    "--chat-selection": "#ffcf6647",
+    "--chat-selection-foreground": "#ffffff",
+    "--text-link": "#8fb8ff",
+    "--diff-added": "#7fd8a0",
+    "--diff-added-background": "#2f7a5a33",
+    "--diff-added-emphasis": "#3f9a6a66",
+    "--diff-added-gutter": "#2f7a5a59",
+    "--diff-removed": "#ff8a7a",
+    "--diff-removed-background": "#a03a4a33",
+    "--diff-removed-emphasis": "#c04a5a66",
+    "--diff-removed-gutter": "#a03a4a59",
+    "--git-decoration-added": "#7fd8a0",
+    "--git-decoration-modified": "#ffcf66",
+    "--git-decoration-deleted": "#ff8a7a",
+    "--git-decoration-renamed": "#86b0ff",
+    "--git-decoration-untracked": "#7fd8b8",
+    "--git-decoration-copied": "#c49bff",
+    "--git-decoration-ignored": "#6a6f9e"
+  },
+  "tokenColors": [
+    {
+      "scope": [
+        "comment",
+        "punctuation.definition.comment"
+      ],
+      "settings": {
+        "foreground": "#7a80b4",
+        "fontStyle": "italic"
+      }
+    },
+    {
+      "scope": [
+        "keyword",
+        "storage",
+        "storage.type",
+        "keyword.control"
+      ],
+      "settings": {
+        "foreground": "#c49bff"
+      }
+    },
+    {
+      "scope": [
+        "string",
+        "string.quoted"
+      ],
+      "settings": {
+        "foreground": "#9fe0a8"
+      }
+    },
+    {
+      "scope": [
+        "constant.numeric",
+        "constant.language",
+        "constant.character"
+      ],
+      "settings": {
+        "foreground": "#ffb27a"
+      }
+    },
+    {
+      "scope": [
+        "entity.name.function",
+        "support.function",
+        "meta.function-call"
+      ],
+      "settings": {
+        "foreground": "#86b0ff"
+      }
+    },
+    {
+      "scope": [
+        "entity.name.type",
+        "entity.name.class",
+        "support.type",
+        "support.class"
+      ],
+      "settings": {
+        "foreground": "#ffcf66"
+      }
+    },
+    {
+      "scope": [
+        "variable.parameter"
+      ],
+      "settings": {
+        "foreground": "#f4c8a0"
+      }
+    },
+    {
+      "scope": [
+        "entity.name.tag"
+      ],
+      "settings": {
+        "foreground": "#ff8a7a"
+      }
+    },
+    {
+      "scope": [
+        "entity.other.attribute-name"
+      ],
+      "settings": {
+        "foreground": "#ffcf66"
+      }
+    },
+    {
+      "scope": [
+        "markup.heading"
+      ],
+      "settings": {
+        "foreground": "#ffcf66",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "scope": [
+        "markup.inline.raw",
+        "markup.fenced_code"
+      ],
+      "settings": {
+        "foreground": "#7fd8b8"
+      }
+    },
+    {
+      "scope": [
+        "invalid"
+      ],
+      "settings": {
+        "foreground": "#ff6b5e"
+      }
+    }
+  ],
+  "background": {
+    "path": "images/starlit-road.png",
+    "opacity": 0.7,
+    "size": "cover",
+    "position": "bottom"
+  }
+}
