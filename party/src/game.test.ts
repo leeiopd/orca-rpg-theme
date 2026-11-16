@@ -1,5 +1,5 @@
 import { assert, test } from 'orca/testing'
-import { assignClasses, classFromTitle, detailForTool, levelForXp, motionForState, motionForTool, xpForTool } from './game'
+import { assignClasses, classFromTitle, detailForTool, handlesInTabOrder, sortByOrder, levelForXp, motionForState, motionForTool, xpForTool } from './game'
 import { drawFrame, FRAMES, GRID, MOTIONS } from './sprites'
 
 test('tools map to motions, MCP tools by their last segment', () => {
@@ -65,4 +65,30 @@ test('every frame is a full grid of hex colors', () => {
         assert.ok(px.every((c) => c === null || /^#[0-9a-f]{6}$/.test(c)))
         assert.ok(px.some((c) => c !== null))
       }
+})
+
+test('tab order follows the visual layout, not the terminal list', () => {
+  const layouts = [
+    {
+      worktreeId: 'w1',
+      root: {
+        type: 'group',
+        tabs: [
+          { tabId: 'a', panes: { type: 'terminal', handle: 'term_a' } },
+          { tabId: 'c', panes: { type: 'terminal', handle: 'term_c' } },
+          {
+            tabId: 'b',
+            panes: { type: 'split', children: [{ type: 'terminal', handle: 'term_b1' }, { type: 'terminal', handle: 'term_b2' }] }
+          }
+        ]
+      }
+    }
+  ]
+  assert.deepEqual(handlesInTabOrder(layouts), ['term_a', 'term_c', 'term_b1', 'term_b2'])
+  assert.deepEqual(handlesInTabOrder(null), [])
+  const rows = [{ id: 'term_b2' }, { id: null }, { id: 'term_a' }, { id: 'term_x' }, { id: 'term_c' }]
+  assert.deepEqual(
+    sortByOrder(rows, (r) => r.id, handlesInTabOrder(layouts)).map((r) => r.id),
+    ['term_a', 'term_c', 'term_b2', null, 'term_x']
+  )
 })

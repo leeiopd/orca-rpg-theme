@@ -10,6 +10,7 @@ import {
   levelForXp,
   motionForState,
   motionForTool,
+  sortByOrder,
   STATE_LABEL,
   type AgentState
 } from './game'
@@ -177,6 +178,23 @@ type AgentRow = {
   stateStartedAt: number
 }
 
+async function tabOrder(): Promise<string[]> {
+  try {
+    return (await orca.plugin.request('party.order')).order
+  } catch {
+    return []
+  }
+}
+
+/** Tabs can be dragged without any event, so check the order now and then. */
+async function reorder(): Promise<void> {
+  if (members.length < 2) return
+  const sorted = sortByOrder(members, (m) => m.terminalId, await tabOrder())
+  if (sorted.every((m, i) => m === members[i])) return
+  members = sorted
+  list.replaceChildren(...members.map((m) => m.el.root))
+}
+
 async function refresh(): Promise<void> {
   let agents: AgentRow[] = []
   try {
@@ -184,6 +202,7 @@ async function refresh(): Promise<void> {
   } catch {
     agents = []
   }
+  agents = sortByOrder(agents, (a) => a.terminalId, await tabOrder())
   const old = new Map(members.map((m) => [m.terminalId, m]))
   const assigned = assignClasses(
     agents.map((a) => ({ id: a.terminalId, title: a.title })),
@@ -278,6 +297,7 @@ async function start(): Promise<void> {
     savedClasses = {}
   }
   await refresh()
+  setInterval(() => void reorder(), 5_000)
 }
 void start()
 requestAnimationFrame(tick)

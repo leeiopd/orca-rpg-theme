@@ -5,6 +5,8 @@ declare module 'orca' {
   interface PluginRequests {
     /** EXP per terminal the worker has stored. */
     'party.xp': { output: { xp: Record<string, number> } }
+    /** Terminal handles in tab order across all workspaces; empty when Orca's CLI cannot answer. */
+    'party.order': { output: { order: string[] } }
   }
   interface PluginPanelEvents {
     /** Posted after an agent finishes a tool call. */

@@ -36,7 +36,37 @@ export function levelForXp(xp: number): { level: number; into: number; need: num
   return { level, into: xp - floor, need: level * 10 }
 }
 
-export const CLASSES: ClassId[] = ['mage', 'warrior', 'ranger', 'cleric', 'rogue']
+/**
+ * Terminal handles in the order Orca shows them: tab groups left to right, tabs in strip order,
+ * panes in split order. Reads the `visualLayouts` of `orca terminal list --include-visual-layouts`
+ * by walking it depth first, so any split shape keeps its order.
+ */
+export function handlesInTabOrder(layouts: unknown): string[] {
+  const out: string[] = []
+  const walk = (node: unknown): void => {
+    if (Array.isArray(node)) return node.forEach(walk)
+    if (!node || typeof node !== 'object') return
+    const o = node as Record<string, unknown>
+    if (o.type === 'terminal' && typeof o.handle === 'string') {
+      if (!out.includes(o.handle)) out.push(o.handle)
+      return
+    }
+    Object.values(o).forEach(walk)
+  }
+  walk(layouts)
+  return out
+}
+
+/** Sorts rows by their position in `order`; rows not in it keep their relative order at the end. */
+export function sortByOrder<T>(rows: T[], idOf: (row: T) => string | null, order: string[]): T[] {
+  const pos = new Map(order.map((id, i) => [id, i]))
+  return rows
+    .map((row, i) => ({ row, i, p: pos.get(idOf(row) ?? '') ?? Number.MAX_SAFE_INTEGER }))
+    .sort((a, b) => a.p - b.p || a.i - b.i)
+    .map((x) => x.row)
+}
+
+export const CLASSES: ClassId[] =['mage', 'warrior', 'ranger', 'cleric', 'rogue']
 
 const CLASS_WORDS: [RegExp, ClassId][] = [
   [/mage|wizard|마법사/i, 'mage'],

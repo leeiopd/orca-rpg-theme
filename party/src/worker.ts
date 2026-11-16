@@ -1,7 +1,37 @@
 // Watches finished tool calls (observe-only hook: Orca never waits on it), adds EXP to the
 // agent's terminal, and tells open Party panels so the member plays the tool's motion.
+import { execFile } from 'node:child_process'
 import type { OrcaWorkerApi } from 'orca/worker'
-import { detailForTool, xpForTool } from './game'
+import { detailForTool, handlesInTabOrder, xpForTool } from './game'
+
+/** Orca's CLI next to the running app, else `orca` on PATH. */
+function orcaCli(): string {
+  if (process.env.ORCA_CLI_COMMAND) return process.env.ORCA_CLI_COMMAND
+  const at = process.execPath.indexOf('.app/Contents/')
+  return at >= 0 ? `${process.execPath.slice(0, at)}.app/Contents/Resources/bin/orca` : 'orca'
+}
+
+/** The plugin API has no tab order, so read it from the CLI's visual layouts (read only). */
+export type ReadLayouts = () => Promise<unknown>
+const readLayoutsFromCli: ReadLayouts = () =>
+  new Promise((resolve) => {
+    execFile(
+      orcaCli(),
+      ['terminal', 'list', '--include-visual-layouts', '--limit', '200', '--json'],
+      { timeout: 5_000, maxBuffer: 8 * 1024 * 1024 },
+      (err, stdout) => {
+        if (err) return resolve(null)
+        try {
+          resolve(JSON.parse(stdout)?.result?.visualLayouts ?? null)
+        } catch {
+          resolve(null)
+        }
+      }
+    )
+  })
+
+/** Tests replace this to avoid running the CLI. */
+export const deps: { readLayouts: ReadLayouts } = { readLayouts: readLayoutsFromCli }
 
 const XP_KEY = 'xp'
 const MAX_ENTRIES = 200
@@ -20,6 +50,15 @@ export default function activate(orca: OrcaWorkerApi): void {
   let chain: Promise<unknown> = Promise.resolve()
 
   orca.panels.handle('party.xp', async () => ({ xp: asTable(await orca.storage.get(XP_KEY)) }))
+
+  // One CLI run serves every panel request made within a second.
+  let cached: { at: number; order: Promise<string[]> } | null = null
+  orca.panels.handle('party.order', async () => {
+    if (!cached || Date.now() - cached.at > 1_000) {
+      cached = { at: Date.now(), order: deps.readLayouts().then(handlesInTabOrder) }
+    }
+    return { order: await cached.order }
+  })
 
   orca.hooks.on('agent.tool.after', (event) => {
     const key = event.terminalId ?? null

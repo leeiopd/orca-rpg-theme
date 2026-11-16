@@ -52,3 +52,18 @@ test('a call without a terminal still animates but stores nothing', async () => 
   assert.deepEqual(host.data().storage, {})
   await worker.deactivate()
 })
+
+test('party.order answers terminal handles in tab order from the layouts', async () => {
+  const saved = main.deps.readLayouts
+  main.deps.readLayouts = async () => [
+    { root: { type: 'group', tabs: [{ panes: { type: 'terminal', handle: 't2' } }, { panes: { type: 'terminal', handle: 't1' } }] } }
+  ]
+  const worker = await mountWorker(main, { host: mockHost() })
+  assert.deepEqual(await worker.request('party.order'), { order: ['t2', 't1'] })
+  main.deps.readLayouts = async () => null
+  await worker.deactivate()
+  const again = await mountWorker(main, { host: mockHost() })
+  assert.deepEqual(await again.request('party.order'), { order: [] })
+  main.deps.readLayouts = saved
+  await again.deactivate()
+})
