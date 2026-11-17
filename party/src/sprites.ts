@@ -33,10 +33,30 @@ export const MOTIONS: Motion[] = [
   'victory',
   'sleep'
 ]
+/**
+ * Per-frame durations in ms for motions that need uneven timing. The attack holds its wind-up,
+ * plays the hit quickly, then rests on frame 4 so the projectile leaves the frame before the next attack.
+ */
+export const TIMING: Partial<Record<Motion, number[]>> = {
+  cast: [520, 170, 170, 170, 760]
+}
+
+/** Frame index for a motion that has been playing for `elapsed` ms; other motions step every `stepMs`. */
+export function frameAt(motion: Motion, elapsed: number, stepMs: number): number {
+  const times = TIMING[motion]
+  if (!times) return Math.floor(elapsed / stepMs) % FRAMES[motion]
+  let t = elapsed % times.reduce((a, b) => a + b, 0)
+  for (let i = 0; i < times.length; i++) {
+    if (t < times[i]) return i
+    t -= times[i]
+  }
+  return 0
+}
+
 export const FRAMES: Record<Motion, number> = {
   idle: 2,
   walk: 4,
-  cast: 4,
+  cast: 5,
   read: 2,
   rune: 4,
   fly: 4,
@@ -248,8 +268,9 @@ const FRONT: Record<ClassId, string[]> = {
   ]
 }
 
-type Arm = 'down' | 'up' | 'forward'
-type Pose = { dy: number; step: number; arm: Arm; sit: boolean; eyesClosed: boolean }
+type Arm = 'down' | 'up' | 'forward' | 'high' | 'low'
+/** reach moves the front foot forward; drawn is a bow pulled back with an arrow nocked. */
+type Pose = { dy: number; step: number; reach: number; arm: Arm; sit: boolean; eyesClosed: boolean; drawn: boolean }
 type Layer = 'body' | 'fx' | 'under'
 
 class Canvas {
@@ -297,30 +318,57 @@ class Canvas {
 const HX = 5 // head origin; the character fills columns 5-27, effects use the right side
 const HY = 10
 
-function poseFor(motion: Motion, frame: number): Pose {
-  const base: Pose = { dy: 0, step: 0, arm: 'down', sit: false, eyesClosed: false }
+function poseFor(cls: ClassId, motion: Motion, frame: number): Pose {
+  const base: Pose = { dy: 0, step: 0, reach: 0, arm: 'down', sit: false, eyesClosed: false, drawn: false }
+  const seq = (frames: Partial<Pose>[]): Pose => ({ ...base, ...frames[frame % frames.length] })
   switch (motion) {
     case 'idle':
       return { ...base, dy: frame % 2 }
     case 'walk':
-      return { ...base, step: frame % 2 === 0 ? 1 : -1, dy: frame % 2 }
+      // Stride, pass, stride, pass: the body rises on the passing frames.
+      return seq([{ step: 2, dy: 1 }, { dy: 0 }, { step: -2, dy: 1 }, { dy: 0 }])
     case 'cast':
-      return { ...base, arm: frame === 0 ? 'up' : 'forward' }
+      // Frame 4 is the rest between attacks; the ranger keeps the bow raised.
+      if (frame === 4) return { ...base, arm: cls === 'ranger' ? 'forward' : 'down' }
+      switch (cls) {
+        case 'warrior':
+          // One overhead swing: wind up, cut through, lunge and follow down. The whole body moves with it.
+          return seq([{ arm: 'up', step: -1 }, { arm: 'high' }, { arm: 'forward', reach: 2, dy: 1 }, { arm: 'low', reach: 2, dy: 1 }])
+        case 'ranger':
+          // The bow stays level: draw on frame 0, then the arrow is loosed.
+          return { ...base, arm: 'forward', drawn: frame === 0 }
+        case 'mage':
+          // Raise the staff to charge, swing it down and thrust; the body leans into the thrust.
+          return seq([{ arm: 'up', step: -1 }, { arm: 'high' }, { arm: 'forward', reach: 1, dy: 1 }, { arm: 'forward', reach: 1 }])
+        case 'cleric':
+          // Staff held high in prayer while the light grows; the cleric rises slightly.
+          return seq([{ arm: 'up' }, { arm: 'up', dy: -1 }, { arm: 'up', dy: -1 }, { arm: 'up' }])
+        case 'rogue':
+          // Wind up, then throw with a forward step; the daggers leave the hand on frame 1.
+          return seq([{ arm: 'up', step: -1 }, { arm: 'forward', reach: 2, dy: 1 }, { arm: 'forward', reach: 2 }, { arm: 'forward', reach: 1 }])
+      }
+      break
     case 'read':
-      return { ...base, arm: 'forward' }
+      // Nods along while reading.
+      return { ...base, arm: 'forward', dy: frame % 2 }
     case 'rune':
-      return { ...base, arm: 'up', dy: frame === 3 ? -1 : 0 }
+      // The arm strokes between raised and forward-up as the rune is carved.
+      return seq([{ arm: 'up' }, { arm: 'high', dy: 1 }, { arm: 'up' }, { arm: 'high', dy: 1 }])
     case 'fly':
-      return { ...base, dy: -3 + (frame % 2), arm: 'forward' }
+      return seq([{ dy: -3, arm: 'forward' }, { dy: -4, arm: 'forward' }, { dy: -3, arm: 'forward' }, { dy: -2, arm: 'forward' }])
     case 'summon':
-      return { ...base, arm: 'up' }
+      // Arm raised, body lifting as the familiar rises.
+      return seq([{ arm: 'high' }, { arm: 'up', dy: -1 }, { arm: 'up', dy: -2 }, { arm: 'up', dy: -1 }])
     case 'help':
-      return { ...base, arm: 'up', dy: frame % 2 }
+      // Hop and wave.
+      return seq([{ arm: 'up', dy: -2 }, { arm: 'high', dy: 0 }])
     case 'victory':
       return { ...base, arm: 'up', dy: [0, -2, -3, -2][frame % 4] }
     case 'sleep':
-      return { ...base, sit: true, eyesClosed: true, dy: 4 }
+      // Slow breathing.
+      return { ...base, sit: true, eyesClosed: true, dy: 4 + (frame % 2) }
   }
+  return base
 }
 
 function drawFace(c: Canvas, x: number, y: number, closed: boolean): void {
@@ -412,7 +460,7 @@ function drawBody(c: Canvas, cls: ClassId, pose: Pose, motion: Motion, frame: nu
     c.rect(HX + 15, y + 23, 3, 3, BOOTS)
   } else {
     const back = HX + 7 + Math.max(0, pose.step)
-    const front = HX + 12 + Math.min(0, pose.step)
+    const front = HX + 12 + Math.min(0, pose.step) + pose.reach
     if (!robed) {
       c.rect(back, y + 24, 3, 2, pal.T)
       c.rect(front, y + 24, 3, 2, pal.t)
@@ -482,11 +530,24 @@ function drawBody(c: Canvas, cls: ClassId, pose: Pose, motion: Motion, frame: nu
     c.rect(HX + 18, y + 13, 1, 7, pal.T)
     hand.x = HX + 18
     hand.y = y + 10
+  } else if (pose.arm === 'high') {
+    // Arm reaching forward and up, mid-swing.
+    c.rect(HX + 15, y + 18, 3, 3, pal.t)
+    c.rect(HX + 17, y + 16, 3, 3, pal.t)
+    c.rect(HX + 17, y + 18, 3, 1, pal.T)
+    hand.x = HX + 19
+    hand.y = y + 14
   } else {
+    // 'forward' and 'low' share a straight arm; only the blade angle differs.
     c.rect(HX + 15, y + 19, 6, 3, pal.t)
     c.rect(HX + 15, y + 21, 6, 1, pal.T)
     hand.x = HX + 21
     hand.y = y + 19
+  }
+  if (pose.drawn) {
+    // Back hand pulling the string to the chest.
+    c.rect(HX + 13, y + 19, 3, 3, SKIN)
+    c.rect(HX + 13, y + 21, 3, 1, SKIN_SHADE)
   }
   c.rect(hand.x, hand.y, 3, 3, SKIN)
   c.rect(hand.x, hand.y + 2, 3, 1, SKIN_SHADE)
@@ -517,7 +578,8 @@ function drawWeapon(c: Canvas, cls: ClassId, pal: Palette, pose: Pose, hand: { x
   const sx = hand.x + 1
   if (cls === 'mage' || cls === 'cleric') {
     const len = pose.sit ? 16 : 21
-    const top = hand.y - (pose.sit ? 8 : 12)
+    // Keep the orb or cross inside the frame when the body lifts; the staff slides in the hand.
+    const top = Math.max(hand.y - (pose.sit ? 8 : 12), cls === 'mage' ? 6 : 8)
     c.rect(sx, top, 1, len, pal.w)
     c.rect(sx + 1, top, 1, len, pal.W)
     if (cls === 'mage') {
@@ -535,7 +597,19 @@ function drawWeapon(c: Canvas, cls: ClassId, pal: Palette, pose: Pose, hand: { x
       c.rect(sx + 1, top - 4, 3, 1, pal.M)
     }
   } else if (cls === 'warrior') {
-    if (pose.arm === 'up' && !pose.sit) {
+    if (pose.arm === 'high' || pose.arm === 'low') {
+      // Blade at 45 degrees, up-right mid-swing or down-right on the follow-through.
+      const dir = pose.arm === 'high' ? -1 : 1
+      const ox = hand.x + 2
+      const oy = pose.arm === 'high' ? hand.y : hand.y + 2
+      for (let i = 0; i < 10; i++) {
+        c.rect(ox + i, oy + dir * i, 2, 2, pal.w)
+        c.p(ox + i + 1, oy + dir * i + (dir < 0 ? 1 : 0), pal.W)
+      }
+      c.p(ox + 10, oy + dir * 10, pal.w)
+      // Crossguard perpendicular to the blade.
+      for (let i = -2; i <= 2; i++) c.p(ox + i, oy + 1 - dir * i, GOLD)
+    } else if (pose.arm === 'up' && !pose.sit) {
       c.rect(sx - 1, hand.y - 12, 3, 12, pal.w)
       c.rect(sx + 1, hand.y - 12, 1, 12, pal.W)
       c.p(sx, hand.y - 13, pal.w)
@@ -570,7 +644,23 @@ function drawWeapon(c: Canvas, cls: ClassId, pal: Palette, pose: Pose, hand: { x
     c.rect(bx + 1, by + 14, 1, 3, pal.w)
     c.rect(bx, by + 17, 1, 2, pal.w)
     c.rect(bx + 3, by + 6, 1, 7, pal.W)
-    c.rect(bx - 1, by + 1, 1, 17, '#e8e0c8')
+    const string = '#e8e0c8'
+    if (!pose.drawn) {
+      c.rect(bx - 1, by + 1, 1, 17, string)
+      return
+    }
+    // String pulled back to the chest in a V, arrow nocked across the grip.
+    const nx = HX + 14
+    const ny = hand.y + 1
+    for (let j = by + 1; j <= by + 17; j++) {
+      const t = 1 - Math.abs(j - ny) / Math.max(ny - by - 1, by + 17 - ny)
+      c.p(Math.round(bx - 1 - t * (bx - 1 - nx)), j, string)
+    }
+    c.rect(nx, ny, bx + 4 - nx, 1, pal.m)
+    c.rect(bx + 4, ny - 1, 2, 3, WHITE)
+    c.p(bx + 6, ny, WHITE)
+    c.p(nx - 1, ny - 1, '#d8484a')
+    c.p(nx - 1, ny + 1, '#d8484a')
   }
 }
 
@@ -590,18 +680,30 @@ function drawEffects(c: Canvas, cls: ClassId, motion: Motion, frame: number, dy:
   const pal = PALETTES[cls]
   switch (motion) {
     case 'cast': {
-      if (frame === 0) return
+      if (frame === 4) return
+      if (frame === 0) {
+        if (cls === 'mage') {
+          // Charge sparks around the raised orb.
+          for (const [x, y] of [[21, HY - 6], [29, HY - 8], [30, HY - 2], [20, HY - 1]]) {
+            c.rect(x - 1, y, 3, 1, pal.effect, 'fx')
+            c.rect(x, y - 1, 1, 3, pal.effect, 'fx')
+            c.p(x, y, pal.effectCore, 'fx')
+          }
+        }
+        return
+      }
       if (cls === 'warrior') {
         // Slash arc sweeping down in front of the blade.
+        // Trail of light behind the blade tip, following the swing.
         const arcs = [
           [],
-          [[32, HY + 2], [34, HY + 4], [36, HY + 7], [37, HY + 10]],
-          [[37, HY + 10], [37, HY + 14], [36, HY + 18], [34, HY + 21]],
-          [[34, HY + 21], [32, HY + 23]]
+          [[27, HY + 4], [31, HY + 6], [34, HY + 9]],
+          [[37, HY + 13], [40, HY + 17], [42, HY + 22], [43, HY + 26]],
+          [[44, HY + 30], [42, HY + 34]]
         ][frame]
         for (const [x, y] of arcs) {
-          c.rect(x, y, 3, 3, pal.effect, 'fx')
-          c.p(x - 1, y + 1, pal.effectCore, 'fx')
+          c.rect(x, y, 2, 2, pal.effect, 'fx')
+          c.p(x, y, pal.effectCore, 'fx')
         }
       } else if (cls === 'cleric') {
         // Holy light: a cross of light that grows.
@@ -621,10 +723,20 @@ function drawEffects(c: Canvas, cls: ClassId, motion: Motion, frame: number, dy:
           c.p(x + 4, y, pal.effectCore, 'fx')
           c.rect(x - 4, y, 4, 1, pal.effect, 'fx')
         }
+      } else if (cls === 'ranger') {
+        // Arrow leaving the bow at grip height, with a short wind streak.
+        const x = 30 + frame * 5
+        const y = HY + 20 + dy
+        c.rect(x, y, 7, 1, pal.m, 'fx')
+        c.rect(x + 7, y - 1, 2, 3, WHITE, 'fx')
+        c.p(x + 9, y, WHITE, 'fx')
+        c.rect(x - 1, y - 1, 2, 1, '#d8484a', 'fx')
+        c.rect(x - 1, y + 1, 2, 1, '#d8484a', 'fx')
+        c.rect(x - 6, y, 4, 1, pal.effect, 'fx')
       } else {
-        // Bolt (mage) or arrow (ranger) flying right.
+        // Magic bolt flying right.
         const x = 26 + frame * 5
-        const y = cls === 'mage' ? HY + 6 : HY + 19
+        const y = HY + 6
         c.rect(x, y, 4, 3, pal.effectCore, 'fx')
         c.rect(x - 4, y, 4, 3, pal.effect, 'fx')
         c.p(x - 6, y + (frame % 2) * 2, pal.effect, 'fx')
@@ -722,7 +834,7 @@ function drawEffects(c: Canvas, cls: ClassId, motion: Motion, frame: number, dy:
 /** One frame of one class doing one motion, as GRID * GRID colors (null = transparent). */
 export function drawFrame(cls: ClassId, motion: Motion, frame: number): (string | null)[] {
   const f = frame % FRAMES[motion]
-  const pose = poseFor(motion, f)
+  const pose = poseFor(cls, motion, f)
   const c = new Canvas()
   drawBody(c, cls, pose, motion, f)
   drawEffects(c, cls, motion, f, pose.dy)

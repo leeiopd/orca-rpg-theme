@@ -14,7 +14,7 @@ import {
   STATE_LABEL,
   type AgentState
 } from './game'
-import { drawFrame, FRAMES, GRID, type ClassId, type Motion } from './sprites'
+import { drawFrame, frameAt, GRID, type ClassId, type Motion } from './sprites'
 
 const SCALE = 2
 const FRAME_MS = 220
@@ -27,7 +27,7 @@ type Member = {
   cls: ClassId
   state: AgentState
   since: number
-  action: { motion: Motion; until: number; line: string } | null
+  action: { motion: Motion; start: number; until: number; line: string } | null
   log: string
   xp: number
   el: {
@@ -215,7 +215,7 @@ function showDemo(): void {
       cls: d.cls,
       state: d.state,
       since: Date.now(),
-      action: { motion: d.motion, until: Number.POSITIVE_INFINITY, line: '' },
+      action: { motion: d.motion, start: 0, until: Number.POSITIVE_INFINITY, line: '' },
       log: battleLine(d.cls, d.motion, d.detail || undefined),
       xp: d.xp
     })
@@ -277,7 +277,9 @@ function tick(now: number): void {
   const t = Date.now()
   for (const m of members) {
     const motion = currentMotion(m, t)
-    const frame = Math.floor(now / FRAME_MS) % FRAMES[motion]
+    // Tool actions start from their first frame; looping states share one clock.
+    const elapsed = m.action ? t - m.action.start : now
+    const frame = frameAt(motion, elapsed, FRAME_MS)
     const key = `${m.cls}/${motion}/${frame}`
     if (key === m.drawn) continue
     m.drawn = key
@@ -314,7 +316,7 @@ orca.plugin.on('party.action', (p) => {
   if (!m) return
   const motion = motionForTool(p.tool)
   const line = battleLine(m.cls, motion, p.detail)
-  m.action = { motion, until: Date.now() + ACTION_MS, line }
+  m.action = { motion, start: Date.now(), until: Date.now() + ACTION_MS, line }
   m.log = line
   m.xp = p.xp
   renderText(m)
