@@ -125,7 +125,8 @@ document.body.append(header, list)
 
 let members: Member[] = []
 let xpTable: Record<string, number> = {}
-const CLASS_KEY = 'classes'
+// v2: classes saved before the tie-break fix were mostly mage; start them over once.
+const CLASS_KEY = 'classes.v2'
 let savedClasses: Record<string, ClassId> = {}
 
 function buildCard(m: Omit<Member, 'el' | 'drawn'>): Member {

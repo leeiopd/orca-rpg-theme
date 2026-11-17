@@ -24,10 +24,18 @@ test('levels need 10, 30, 60 total EXP', () => {
 test('a party of the same agent still gets mixed classes, kept per terminal', () => {
   const six = ['a', 'b', 'c', 'd', 'e', 'f'].map((id) => ({ id, title: 'claude' }))
   const first = assignClasses(six, {})
-  assert.deepEqual(first.classes, ['mage', 'warrior', 'ranger', 'cleric', 'rogue', 'mage'])
+  // The first five are all different; the same input gives the same classes.
+  assert.equal(new Set(first.classes.slice(0, 5)).size, 5)
+  assert.deepEqual(assignClasses(six, {}).classes, first.classes)
   // Reordered and with a new member: old members keep their class, the new one gets an unused one.
   const again = assignClasses([six[2], { id: 'g', title: null }, six[0], six[1]], first.saved)
-  assert.deepEqual(again.classes, ['ranger', 'cleric', 'mage', 'warrior'])
+  assert.deepEqual([again.classes[0], again.classes[2], again.classes[3]], [first.classes[2], first.classes[0], first.classes[1]])
+  assert.ok(![first.classes[0], first.classes[1], first.classes[2]].includes(again.classes[1]))
+})
+
+test('the first member of a new party is not always the same class', () => {
+  const firsts = new Set(Array.from({ length: 40 }, (_, i) => assignClasses([{ id: `term-${i}`, title: null }], {}).classes[0]))
+  assert.equal(firsts.size, 5)
 })
 
 test('a class named in the tab title wins', () => {

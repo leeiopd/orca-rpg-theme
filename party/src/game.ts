@@ -87,6 +87,13 @@ export function classFromTitle(title: string | null | undefined): ClassId | null
  * before (by terminal id), and a new member gets the class used least in the party so far.
  * Returns the classes in member order and the updated saved table.
  */
+/** Small stable string hash (FNV-1a), non-negative. */
+function hash(text: string): number {
+  let h = 0x811c9dc5
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 0x01000193)
+  return h >>> 0
+}
+
 export function assignClasses(
   members: { id: string | null; title: string | null }[],
   saved: Record<string, ClassId>
@@ -96,8 +103,11 @@ export function assignClasses(
   const used = (cls: ClassId) => classes.filter((c) => c === cls).length
   members.forEach((m, i) => {
     if (classes[i]) return
-    const pick = [...CLASSES].sort((a, b) => used(a) - used(b))[0]
-    classes[i] = pick
+    // Among the least-used classes, let the terminal id choose, so the first card of a party
+    // is not always the same class. The same id always picks the same class.
+    const least = Math.min(...CLASSES.map(used))
+    const ties = CLASSES.filter((cls) => used(cls) === least)
+    classes[i] = ties[hash(m.id ?? String(i)) % ties.length]
   })
   members.forEach((m, i) => {
     if (m.id) next[m.id] = classes[i] as ClassId
